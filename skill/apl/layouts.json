@@ -1,0 +1,21 @@
+{
+  "type": "APL",
+  "version": "1.0.0",
+  "imports": [
+    {
+      "name": "alexa-styles",
+      "version": "1.0.0-beta"
+    },
+    {
+      "name": "alexa-layouts",
+      "version": "1.0.0-beta"
+    },
+    {
+      "name": "styles",
+      "version": "1.0.0",
+      "source": "https://d3nxfqcos36ix4.cloudfront.net/skill/apl/styles.json"
+    }
+  ],
+  "layouts": {    
+  }
+}

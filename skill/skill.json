@@ -1,0 +1,53 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "Fork On The Road",
+          "summary": "Spin the \"Fork On The Road\" to help you make a decision.",
+          "description": "Looks like you need some help making a decision. Let the \"Fork On The Road\" be your guide. Add up to four things for the fork to choose from. Then spin the fork to choose your path.",
+          "examplePhrases": [
+            "Alexa, ask Fork On The Road",
+            "Alexa, start Fork On The Road",
+            "Alexa, play Fork On The Road"
+          ],
+          "keywords": [
+            "decision maker",
+            "spin the wheel",
+            "flip a coin"
+          ],
+          "smallIconUri": "https://d3nxfqcos36ix4.cloudfront.net/skill/icons/skill-icon-sm.png",
+          "largeIconUri": "https://d3nxfqcos36ix4.cloudfront.net/skill/icons/skill-icon-lg.png"                 
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "Say, start Fork On The Road.  Add up to 4 things for the fork to choose from. Then spin the fork to choose your path.",
+      "category": "GAMES",
+      "distributionCountries": []
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "sourceDir": "lambda/custom",
+          "uri": "fork-in-the-road"
+        },
+        "interfaces": [
+          {
+            "type": "ALEXA_PRESENTATION_APL"
+          },
+          {
+            "type": "RENDER_TEMPLATE"
+          }
+        ]
+      }
+    },
+    "manifestVersion": "1.0",
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": false,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false
+    }    
+  }
+}

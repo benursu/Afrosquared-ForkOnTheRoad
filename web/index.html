@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Fork On The Road</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000;
+				color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				position: absolute;
+				top: 10px;
+				width: 100%;
+				text-align: center;
+				z-index: 100;
+				display:block;
+			}
+			a {
+				color: #f00;
+				font-weight: bold;
+				text-decoration: underline;
+				cursor: pointer
+			}
+		</style>
+
+		<script src="js/three.min.js"></script>
+				
+		<!-- <script src="js/libs/inflate.min.js"></script>
+		<script src="js/loaders/FBXLoader.js"></script>
+		<script src="js/TweenMax.min.js"></script> -->
+
+	</head>
+
+	<body>
+		<div id="loaded"></div>
+
+		<script>
+
+
+			/////////////////////////////////////////////
+			// init
+			var mode = 'choices'; // intro, home, choices, picked, pickedStatic, choicesMediaKit, pickedMediaKit, jumping, spin0, spin1, spin2, spin3, ground, loading
+			var modeForce = '';
+
+
+			/////////////////////////////////////////////
+			// vars
+
+			function getParameterByName(name, url) {
+				if (!url) url = window.location.href;
+				name = name.replace(/[\[\]]/g, '\\$&');
+				var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+					results = regex.exec(url);
+				if (!results) return null;
+				if (!results[2]) return '';
+				return decodeURIComponent(results[2].replace(/\+/g, ' '));
+			}
+
+			var size = getParameterByName('size');
+			if(size == null){
+				size = 'large';
+			}
+			var choice0 = getParameterByName('choice0');
+			if(choice0 == null || choice0 == ''){
+				choice0 = '';
+			}
+			var choice1 = getParameterByName('choice1');
+			if(choice1 == null || choice1 == ''){
+				choice1 = '';
+			}
+			var choice2 = getParameterByName('choice2');
+			if(choice2 == null || choice2 == ''){
+				choice2 = '';
+			}
+			var choice3 = getParameterByName('choice3');
+			if(choice3 == null || choice3 == ''){
+				choice3 = '';
+			}
+			var picked = getParameterByName('picked');
+			if(picked == null){
+				picked = '';
+			}	
+
+			var maxLength = 30;
+			if(choice0.length > maxLength){
+				choice0 = choice0.substr(0, maxLength);
+			}
+			if(choice1.length > maxLength){
+				choice1 = choice1.substr(0, maxLength);
+			}
+			if(choice2.length > maxLength){
+				choice2 = choice2.substr(0, maxLength);
+			}
+			if(choice3.length > maxLength){
+				choice3 = choice3.substr(0, maxLength);
+			}
+			if(picked.length > maxLength){
+				picked = picked.substr(0, maxLength);
+			}
+
+			choice0 = choice0.toUpperCase();
+			choice1 = choice1.toUpperCase();
+			choice2 = choice2.toUpperCase();
+			choice3 = choice3.toUpperCase();
+			var choices = [choice0, choice1, choice2, choice3];
+			picked = picked.toUpperCase();
+
+			/////////////////////////////////////////////
+			// scene
+				
+			var loaded = document.getElementById('loaded');
+			var sceneFork;
+
+			if(picked != ''){
+				mode = 'picked';
+			}
+			if(modeForce != ''){
+				mode = modeForce;
+			}
+
+			var SHADOW_MAP_WIDTH = 2048, SHADOW_MAP_HEIGHT = 2048;
+
+			var SCREEN_WIDTH = window.innerWidth;
+			var SCREEN_HEIGHT = window.innerHeight;
+			var FLOOR = -250;
+
+			var camera, controls, scene, renderer;
+			var container, stats;
+
+			var NEAR = 10, FAR = 3000;
+			var light;
+
+			var maxTextScaleChoice = 0.7;
+			var maxTextLengthChoiceSmall = [400, 400, 275, 275];
+			var maxTextLengthChoiceMedium = [775, 775, 535, 535];
+			var maxTextLengthChoiceLarge = [775, 775, 535, 535];
+			var maxTextLengthChoicePickedSmall = 800;
+			var maxTextLengthChoicePickedMedium = 1322;
+			var maxTextLengthChoicePickedLarge = 1322;
+			var maxTextLengthChoice = [1000, 1000, 1000, 1000];
+			var maxTextLengthChoicePicked = 1300;
+
+			if(size == 'small'){
+				maxTextLengthChoice = maxTextLengthChoiceSmall;
+				maxTextLengthChoicePicked = maxTextLengthChoicePickedSmall;
+			}else if(size == 'medium'){
+				maxTextLengthChoice = maxTextLengthChoiceMedium;
+				maxTextLengthChoicePicked = maxTextLengthChoicePickedMedium;
+			}else if(size == 'large'){
+				maxTextLengthChoice = maxTextLengthChoiceLarge;
+				maxTextLengthChoicePicked = maxTextLengthChoicePickedLarge;
+			}
+
+			init();
+			animate();
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				// SCENE CAMERA
+
+				camera = new THREE.PerspectiveCamera( 23, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
+				camera.position.set( 0, 1000, 1700 );
+				camera.lookAt(new THREE.Vector3(0,0,350));
+				// console.log(camera)
+
+				// SCENE
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x0060AD );
+				scene.fog = new THREE.Fog( 0x0060AD, 100, 5200 );
+
+				// LIGHTS
+
+				var ambient = new THREE.AmbientLight( 0xC3C3C3 );
+				scene.add( ambient );
+
+				light = new THREE.SpotLight( 0xffffff, 1, 0, Math.PI / 2 );
+				light.position.set( 0, 1500, 1000 );
+				light.target.position.set( 0, 0, 0 );
+
+				if(mode != 'choices' && mode != 'picked'){
+					light.castShadow = true;
+					light.shadow = new THREE.LightShadow( new THREE.PerspectiveCamera( 50, 1, 1200, 2500 ) );
+					light.shadow.bias = 0.0001;
+					light.shadow.mapSize.width = SHADOW_MAP_WIDTH;
+					light.shadow.mapSize.height = SHADOW_MAP_HEIGHT;
+				}
+
+				scene.add( light );
+
+				createScene();
+
+				// RENDERER
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+				renderer.autoClear = false;
+				if(mode != 'choices' && mode != 'picked'){
+					renderer.shadowMap.enabled = true;
+					renderer.shadowMap.type = THREE.PCFShadowMap;
+				}
+				container.appendChild( renderer.domElement );
+
+			}
+
+
+			function createScene( ) {
+
+				if(mode == 'intro'){
+					// ground
+					var geometry = new THREE.PlaneBufferGeometry( 100, 100 );
+					var planeMaterial = new THREE.MeshPhongMaterial( { color: 0xffdd99 } );
+
+					var ground = new THREE.Mesh( geometry, planeMaterial );
+					ground.position.set( 0, FLOOR, 0 );
+					ground.rotation.x = - Math.PI / 2;
+					ground.scale.set( 100, 100, 100 );
+					ground.castShadow = false;
+					ground.receiveShadow = true;
+					scene.add( ground );
+
+					// text
+					var loader = new THREE.FontLoader();
+					loader.load( 'fonts/standard_09_65_normal.typeface.json', function ( font ) {
+
+						var textMaterial = new THREE.MeshPhongMaterial( { color: 0xFF2A2A, specular: 0xFFFFFF } );					
+
+						var words = ['FORK ON', 'THE ROAD'];
+						for(var i = 0; i < words.length; i++){
+
+							var textGeo = new THREE.TextBufferGeometry( words[i], {
+								font: font,
+
+								size: 120,
+								height: 40,
+								curveSegments: 12,
+
+								bevelThickness: 4,
+								bevelSize: 5,
+								bevelEnabled: true
+
+							} );
+
+							textGeo.computeBoundingBox();
+							var length = textGeo.boundingBox.max.x - textGeo.boundingBox.min.x;
+							var centerOffset = - 0.5 * length;
+
+							var meshContainer = new THREE.Object3D();
+							var meshScale = 0.7;
+							meshContainer.scale.set(meshScale, meshScale, meshScale);
+							meshContainer.position.x = 0;
+							meshContainer.position.y = FLOOR;
+							meshContainer.position.z = 0;
+							// if(i == 0 || i ==  2){
+							// 	meshContainer.rotation.y = -Math.PI / 4;
+							// }else{
+							// 	meshContainer.rotation.y = Math.PI / 4;
+							// }						
+							meshContainer.rotation.y = Math.PI / 4;
+							scene.add(meshContainer);
+
+							var mesh = new THREE.Mesh( textGeo, textMaterial );
+							var spacer = 200;
+							var sideOfRoad = 65;
+							var roadWidth = 150;
+							if(i == 0){
+								mesh.position.x = centerOffset;
+								mesh.position.z = -130;
+							}else if(i == 1){
+								mesh.position.x = centerOffset;
+								mesh.position.z = 130;
+							}												
+							mesh.castShadow = true;
+							mesh.receiveShadow = true;
+
+							meshContainer.add(mesh);
+
+						}
+
+						sceneFork = new THREE.Object3D();
+						sceneForkScale = 0.12;
+						var offset = 170;
+						sceneFork.position.x = offset;
+						sceneFork.position.z = offset;
+						sceneFork.position.y = FLOOR + 2;
+						sceneFork.scale.set(sceneForkScale, sceneForkScale, sceneForkScale);
+						//sceneFork.rotation.y = (-Math.PI / 4) + (-Math.PI / 4);
+						sceneFork.rotation.y = (Math.PI / 4)
+						scene.add(sceneFork);
+
+						var loaderSceneFork = new THREE.FBXLoader();
+						loaderSceneFork.load('assets/scene/fork/fork-fbx.html', function ( object ) {
+
+							object.traverse( function ( child ) {
+
+								if ( child.isMesh ) {
+
+									child.castShadow = true;
+									child.receiveShadow = true;
+
+								}
+
+							} );
+
+							sceneFork.add( object );
+
+							loaded.innerHTML = '<div id="loadedComplete"></div>';
+
+						} );						
+
+
+					} );					
+				
+
+				}else if(mode == 'ground'){
+
+					var sceneSmall = new THREE.Object3D();
+					var sceneSmallScale = 0.2;
+					sceneSmall.position.y = FLOOR - 5;
+					sceneSmall.scale.set(sceneSmallScale, sceneSmallScale, sceneSmallScale);
+					sceneSmall.rotation.y = Math.PI / 4;
+					scene.add(sceneSmall);
+
+					var loaderSceneSmall = new THREE.FBXLoader();
+					loaderSceneSmall.load('assets/scene/sceneSmall/sceneSmall-fbx.html', function ( object ) {
+
+						object.traverse( function ( child ) {
+
+							if ( child.isMesh ) {
+
+								child.castShadow = true;
+								child.receiveShadow = true;
+
+							}
+
+						} );
+
+						sceneSmall.add( object );
+
+
+						sceneFork = new THREE.Object3D();
+						sceneForkScale = 0.012;
+						sceneFork.position.x = 8;
+						sceneFork.position.y = FLOOR + 2;
+						sceneFork.scale.set(sceneForkScale, sceneForkScale, sceneForkScale);
+						sceneFork.rotation.y = (-Math.PI / 4) + (-Math.PI / 4);
+						scene.add(sceneFork);
+
+						var loaderSceneFork = new THREE.FBXLoader();
+						loaderSceneFork.load('assets/scene/fork/fork-fbx.html', function ( object ) {
+
+							object.traverse( function ( child ) {
+
+								if ( child.isMesh ) {
+
+									child.castShadow = true;
+									child.receiveShadow = true;
+
+								}
+
+							} );
+
+							// sceneFork.add( object );
+
+							setTimeout(function(){
+								loaded.innerHTML = '<div id="loadedComplete"></div>';
+							}, 2000);
+
+						} );					
+
+
+					} );	
+					
+					
+				}else if(mode == 'loading'){
+					
+					var loader = new THREE.TextureLoader();
+					var backgroundFile = 'assets/skill/background_1280_800.png';
+					if(size == 'medium'){
+						backgroundFile = 'assets/skill/background_1024_600.png';
+					}else if(size == 'small'){
+						backgroundFile = 'assets/skill/background_480_480.png';
+					}
+
+					loader.load(backgroundFile, function(texture)
+					{
+						texture.minFilter = texture.magFilter = THREE.LinearFilter;
+						scene.background = texture;
+					});					
+
+					var geometry = new THREE.PlaneBufferGeometry( 1000, 1000 );
+					// var planeMaterial = new THREE.MeshPhongMaterial( { color: 0xFFFFFF, transparent: true, opacity: 0.001 } );
+					var planeMaterial = new THREE.ShadowMaterial();
+					planeMaterial.opacity = 0.5;
+
+					var ground = new THREE.Mesh( geometry, planeMaterial );
+					ground.position.set( 0, FLOOR, 0 );
+					ground.rotation.x = - Math.PI / 2;
+					ground.scale.set( 100, 100, 100 );
+					ground.castShadow = false;
+					ground.receiveShadow = true;
+					scene.add( ground );
+
+					// text
+					var loadingText = ['LOADING...'];
+					var loader = new THREE.FontLoader();
+					loader.load( 'fonts/standard_09_65_normal.typeface.json', function ( font ) {
+
+						var textMaterial = new THREE.MeshPhongMaterial( { color: 0xFFFFFF, specular: 0xFFFFFF } );					
+
+						for(var i = 0; i < loadingText.length; i++){
+
+
+							var textGeo = new THREE.TextBufferGeometry( loadingText[i], {
+								font: font,
+
+								size: 40,
+								height: 10,
+								curveSegments: 12,
+
+								bevelThickness: 2,
+								bevelSize: 2,
+								bevelEnabled: true
+
+							} );
+
+							textGeo.computeBoundingBox();
+							var length = textGeo.boundingBox.max.x - textGeo.boundingBox.min.x;
+							var centerOffset = - 0.5 * length;
+
+							var meshContainer = new THREE.Object3D();
+							var meshScale = 0.7;
+							meshContainer.scale.set(meshScale, meshScale, meshScale);
+							meshContainer.position.x = 25;
+							meshContainer.position.y = -850;
+							meshContainer.position.z = -380;
+							meshContainer.rotation.x = -Math.PI / 2;
+							scene.add(meshContainer);
+
+							var mesh = new THREE.Mesh( textGeo, textMaterial );
+							var spacer = 200;
+							var sideOfRoad = 88;
+							var roadWidth = 150;
+							mesh.position.x = centerOffset;
+							// mesh.position.z = -sideOfRoad;
+											
+							// mesh.castShadow = true;
+							// mesh.receiveShadow = true;
+
+							meshContainer.add(mesh);
+
+						}
+
+						loaded.innerHTML = '<div id="loadedComplete"></div>';
+
+					} );								
+
+				}else if(mode == 'choices'){
+
+					var loader = new THREE.TextureLoader();
+					var backgroundFile = 'assets/skill/background_1280_800.png';
+					if(size == 'medium'){
+						backgroundFile = 'assets/skill/background_1024_600.png';
+					}else if(size == 'small'){
+						backgroundFile = 'assets/skill/background_480_480.png';
+					}
+
+					loader.load(backgroundFile, function(texture)
+					{
+						texture.minFilter = texture.magFilter = THREE.LinearFilter;
+						scene.background = texture;
+					});					
+
+					// var geometry = new THREE.PlaneBufferGeometry( 1000, 1000 );
+					// // var planeMaterial = new THREE.MeshPhongMaterial( { color: 0xFFFFFF, transparent: true, opacity: 0.001 } );
+					// var planeMaterial = new THREE.ShadowMaterial();
+					// planeMaterial.opacity = 0.5;
+
+					// var ground = new THREE.Mesh( geometry, planeMaterial );
+					// ground.position.set( 0, FLOOR, 0 );
+					// ground.rotation.x = - Math.PI / 2;
+					// ground.scale.set( 100, 100, 100 );
+					// ground.castShadow = false;
+					// ground.receiveShadow = true;
+					// scene.add( ground );
+
+					// text
+					var loader = new THREE.FontLoader();
+					loader.load( 'fonts/standard_09_65_normal.typeface.json', function ( font ) {
+
+						var textMaterial = new THREE.MeshPhongMaterial( { color: 0xFF2A2A, specular: 0xFFFFFF } );					
+
+						for(var i = 0; i < choices.length; i++){
+
+							var textGeo = new THREE.TextBufferGeometry( choices[i], {
+								font: font,
+
+								size: 90,
+								height: 25,
+								curveSegments: 1,
+
+								bevelThickness: 4,
+								bevelSize: 5,
+								bevelEnabled: true
+
+							} );
+
+							textGeo.computeBoundingBox();
+							var length = textGeo.boundingBox.max.x - textGeo.boundingBox.min.x;
+							// var centerOffset = - 0.5 * length;
+
+							var meshContainer = new THREE.Object3D();
+							meshContainer.position.x = 0;
+							meshContainer.position.y = FLOOR + 0;
+							meshContainer.position.z = 0;
+							if(i == 0 || i ==  2){
+								meshContainer.rotation.y = -Math.PI / 4;
+							}else{
+								meshContainer.rotation.y = Math.PI / 4;
+							}						
+							scene.add(meshContainer);
+
+							var mesh = new THREE.Mesh( textGeo, textMaterial );
+							var meshScale = 1;
+							if(length > maxTextLengthChoice[i]){
+								meshScale = (maxTextLengthChoice[i] / length);								
+							}
+							if(meshScale > maxTextScaleChoice){
+								meshScale = maxTextScaleChoice;
+							}
+							mesh.scale.set(meshScale, meshScale, meshScale);
+							var spacer = 175;
+							if(size == 'small'){
+								spacer = 130;
+							}							
+							var sideOfRoad = 63;
+							var roadWidth = 150;
+							if(i == 0){
+								mesh.position.x = -(length * meshScale) - spacer;
+								mesh.position.z = -sideOfRoad;
+							}else if(i == 1){
+								mesh.position.x = spacer;
+								mesh.position.z = -sideOfRoad;
+							}else if(i == 2){
+								mesh.position.x = spacer;
+								mesh.position.z = -sideOfRoad;
+							}else if(i == 3){
+								mesh.position.x = -(length * meshScale) - spacer;
+								mesh.position.z = -sideOfRoad;
+							}												
+							// mesh.castShadow = true;
+							// mesh.receiveShadow = true;
+
+							if(i == 0){
+								meshContainer.add(mesh);
+							}else if(i == 1){
+								meshContainer.add(mesh);
+							}else if(i == 2){
+								meshContainer.add(mesh);
+							}else if(i == 3){
+								meshContainer.add(mesh);
+							}	
+
+						}
+
+						loaded.innerHTML = '<div id="loadedComplete"></div>';
+
+					} );
+
+
+				}else if(mode == 'picked'){
+
+
+					var loader = new THREE.TextureLoader();
+					var backgroundFile = 'assets/skill/picked_1280_800.png';
+					if(size == 'medium'){
+						backgroundFile = 'assets/skill/picked_1024_600.png';
+					}else if(size == 'small'){
+						backgroundFile = 'assets/skill/picked_480_480.png';
+					}
+
+					loader.load(backgroundFile, function(texture)
+					{
+						texture.minFilter = texture.magFilter = THREE.LinearFilter;
+						scene.background = texture;
+					});	
+
+					// ground
+					// var geometry = new THREE.PlaneBufferGeometry( 1000, 1000 );
+					// // var planeMaterial = new THREE.MeshPhongMaterial( { color: 0xFFFFFF, transparent: true, opacity: 0.001 } );
+					// var planeMaterial = new THREE.ShadowMaterial();
+					// planeMaterial.opacity = 0.5;
+
+					// var ground = new THREE.Mesh( geometry, planeMaterial );
+					// ground.position.set( 0, FLOOR, 0 );
+					// ground.rotation.x = - Math.PI / 2;
+					// ground.scale.set( 100, 100, 100 );
+					// ground.castShadow = false;
+					// ground.receiveShadow = true;
+					// scene.add( ground );
+
+					// text
+					var loader = new THREE.FontLoader();
+					loader.load( 'fonts/standard_09_65_normal.typeface.json', function ( font ) {
+
+						var textMaterial = new THREE.MeshPhongMaterial( { color: 0xFF2A2A, specular: 0xFFFFFF } );					
+						var textGeo = new THREE.TextBufferGeometry( picked, {
+							font: font,
+
+							size: 120,
+							height: 40,
+							curveSegments: 12,
+
+							bevelThickness: 4,
+							bevelSize: 5,
+							bevelEnabled: true
+
+						} );
+
+						textGeo.computeBoundingBox();
+						var length = textGeo.boundingBox.max.x - textGeo.boundingBox.min.x;
+						var centerOffset = - 0.5 * length;
+
+						var meshContainer = new THREE.Object3D();
+						var meshScale = 1;
+						if(length > maxTextLengthChoicePicked){
+							meshScale = (maxTextLengthChoicePicked / length);
+						}
+						meshContainer.scale.set(meshScale, meshScale, meshScale);
+						meshContainer.position.x = 0;
+						meshContainer.position.y = FLOOR;
+						meshContainer.position.z = 0;
+						// if(i == 0 || i ==  2){
+						// 	meshContainer.rotation.y = -Math.PI / 4;
+						// }else{
+						// 	meshContainer.rotation.y = Math.PI / 4;
+						// }						
+						meshContainer.rotation.y = Math.PI / 4;
+						scene.add(meshContainer);
+
+						var mesh = new THREE.Mesh( textGeo, textMaterial );
+						var spacer = 200;
+						var sideOfRoad = 65;
+						var roadWidth = 150;
+						mesh.position.x = centerOffset;
+						mesh.position.z = -50;										
+						mesh.castShadow = true;
+						mesh.receiveShadow = true;
+						meshContainer.add(mesh);
+
+						loaded.innerHTML = '<div id="loadedComplete"></div>';						
+
+
+					} );
+
+				}else if(mode == 'choicesMediaKit'){
+
+					var sceneSmall = new THREE.Object3D();
+					var sceneSmallScale = 0.2;
+					sceneSmall.position.y = FLOOR - 5;
+					sceneSmall.scale.set(sceneSmallScale, sceneSmallScale, sceneSmallScale);
+					sceneSmall.rotation.y = Math.PI / 4;
+					scene.add(sceneSmall);
+
+					var loaderSceneSmall = new THREE.FBXLoader();
+					loaderSceneSmall.load('assets/scene/sceneSmall/sceneSmall-fbx.html', function ( object ) {
+
+						object.traverse( function ( child ) {
+
+							if ( child.isMesh ) {
+
+								child.castShadow = true;
+								child.receiveShadow = true;
+
+							}
+
+						} );
+
+						sceneSmall.add( object );
+
+
+						sceneFork = new THREE.Object3D();
+						sceneForkScale = 0.012;
+						sceneFork.position.x = 8;
+						sceneFork.position.y = FLOOR + 2;
+						sceneFork.scale.set(sceneForkScale, sceneForkScale, sceneForkScale);
+						sceneFork.rotation.y = (-Math.PI / 4) + (-Math.PI / 4);
+						scene.add(sceneFork);
+
+						var loaderSceneFork = new THREE.FBXLoader();
+						loaderSceneFork.load('assets/scene/fork/fork-fbx.html', function ( object ) {
+
+							object.traverse( function ( child ) {
+
+								if ( child.isMesh ) {
+
+									child.castShadow = true;
+									child.receiveShadow = true;
+
+								}
+
+							} );
+
+							sceneFork.add( object );
+
+						} );					
+
+
+					} );
+
+					// text
+					var loader = new THREE.FontLoader();
+					loader.load( 'fonts/standard_09_65_normal.typeface.json', function ( font ) {
+
+						var textMaterial = new THREE.MeshPhongMaterial( { color: 0xFF2A2A, specular: 0xFFFFFF } );					
+
+						for(var i = 0; i < choices.length; i++){
+
+							var textGeo = new THREE.TextBufferGeometry( choices[i], {
+								font: font,
+
+								size: 90,
+								height: 25,
+								curveSegments: 1,
+
+								bevelThickness: 4,
+								bevelSize: 5,
+								bevelEnabled: true
+
+							} );
+
+							textGeo.computeBoundingBox();
+							var length = textGeo.boundingBox.max.x - textGeo.boundingBox.min.x;
+							var centerOffset = - 0.5 * length;
+
+							var meshContainer = new THREE.Object3D();
+							var meshScale = 0.7;
+							meshContainer.scale.set(meshScale, meshScale, meshScale);
+							meshContainer.position.x = 0;
+							meshContainer.position.y = FLOOR + 0;
+							meshContainer.position.z = 0;
+							if(i == 0 || i ==  2){
+								meshContainer.rotation.y = -Math.PI / 4;
+							}else{
+								meshContainer.rotation.y = Math.PI / 4;
+							}						
+							scene.add(meshContainer);
+
+							var mesh = new THREE.Mesh( textGeo, textMaterial );
+							var spacer = 200;
+							var sideOfRoad = 88;
+							var roadWidth = 150;
+							if(i == 0){
+								mesh.position.x = -length - spacer;
+								mesh.position.z = -sideOfRoad;
+							}else if(i == 1){
+								mesh.position.x = spacer;
+								mesh.position.z = -sideOfRoad;
+							}else if(i == 2){
+								mesh.position.x = spacer;
+								mesh.position.z = -sideOfRoad;
+							}else if(i == 3){
+								mesh.position.x = -length - spacer;
+								mesh.position.z = -sideOfRoad;
+							}												
+							mesh.castShadow = true;
+							mesh.receiveShadow = true;
+
+							if(i == 0){
+								meshContainer.add(mesh);
+							}else if(i == 1){
+								meshContainer.add(mesh);
+							}else if(i == 2){
+								meshContainer.add(mesh);
+							}else if(i == 3){
+								meshContainer.add(mesh);
+							}	
+
+						}
+
+						loaded.innerHTML = '<div id="loadedComplete"></div>';
+
+					} );	
+
+				}else if(mode == 'pickedMediaKit'){
+
+					// text
+					var loader = new THREE.FontLoader();
+					loader.load( 'fonts/standard_09_65_normal.typeface.json', function ( font ) {
+
+						var textMaterial = new THREE.MeshPhongMaterial( { color: 0xFF2A2A, specular: 0xFFFFFF } );					
+						var textGeo = new THREE.TextBufferGeometry( picked, {
+							font: font,
+
+							size: 120,
+							height: 40,
+							curveSegments: 12,
+
+							bevelThickness: 4,
+							bevelSize: 5,
+							bevelEnabled: true
+
+						} );
+
+						textGeo.computeBoundingBox();
+						var length = textGeo.boundingBox.max.x - textGeo.boundingBox.min.x;
+						var centerOffset = - 0.5 * length;
+
+						var meshContainer = new THREE.Object3D();
+						var meshScale = 0.7;
+						meshContainer.scale.set(meshScale, meshScale, meshScale);
+						meshContainer.position.x = 0;
+						meshContainer.position.y = FLOOR;
+						meshContainer.position.z = 0;
+						// if(i == 0 || i ==  2){
+						// 	meshContainer.rotation.y = -Math.PI / 4;
+						// }else{
+						// 	meshContainer.rotation.y = Math.PI / 4;
+						// }						
+						meshContainer.rotation.y = Math.PI / 4;
+						scene.add(meshContainer);
+
+						var mesh = new THREE.Mesh( textGeo, textMaterial );
+						var spacer = 200;
+						var sideOfRoad = 65;
+						var roadWidth = 150;
+						mesh.position.x = centerOffset;
+						mesh.position.z = -50;										
+						mesh.castShadow = true;
+						mesh.receiveShadow = true;
+						meshContainer.add(mesh);
+
+					} );		
+					
+					// ground
+					var geometry = new THREE.PlaneBufferGeometry( 100, 100 );
+					var planeMaterial = new THREE.MeshPhongMaterial( { color: 0xffdd99 } );
+
+					var ground = new THREE.Mesh( geometry, planeMaterial );
+					ground.position.set( 0, FLOOR, 0 );
+					ground.rotation.x = - Math.PI / 2;
+					ground.scale.set( 100, 100, 100 );
+					ground.castShadow = false;
+					ground.receiveShadow = true;
+					scene.add( ground );
+
+					sceneFork = new THREE.Object3D();
+					sceneForkScale = 0.12;
+					var offset = 100;
+					sceneFork.position.x = offset;
+					sceneFork.position.z = offset;
+					sceneFork.position.y = FLOOR + 2;
+					sceneFork.scale.set(sceneForkScale, sceneForkScale, sceneForkScale);
+					//sceneFork.rotation.y = (-Math.PI / 4) + (-Math.PI / 4);
+					sceneFork.rotation.y = (Math.PI / 4)
+					scene.add(sceneFork);
+
+					var loaderSceneFork = new THREE.FBXLoader();
+					loaderSceneFork.load('assets/scene/fork/fork-fbx.html', function ( object ) {
+
+						object.traverse( function ( child ) {
+
+							if ( child.isMesh ) {
+
+								child.castShadow = true;
+								child.receiveShadow = true;
+
+							}
+
+						} );
+
+						sceneFork.add( object );
+
+						loaded.innerHTML = '<div id="loadedComplete"></div>';
+
+					} );					
+
+				}else if(mode == 'pickedStatic'){
+
+					// ground
+					var geometry = new THREE.PlaneBufferGeometry( 100, 100 );
+					var planeMaterial = new THREE.MeshPhongMaterial( { color: 0xffdd99 } );
+
+					var ground = new THREE.Mesh( geometry, planeMaterial );
+					ground.position.set( 0, FLOOR, 0 );
+					ground.rotation.x = - Math.PI / 2;
+					ground.scale.set( 100, 100, 100 );
+					ground.castShadow = false;
+					ground.receiveShadow = true;
+					scene.add( ground );
+
+					sceneFork = new THREE.Object3D();
+					sceneForkScale = 0.12;
+					var offset = 100;
+					sceneFork.position.x = offset;
+					sceneFork.position.z = offset;
+					sceneFork.position.y = FLOOR + 2;
+					sceneFork.scale.set(sceneForkScale, sceneForkScale, sceneForkScale);
+					//sceneFork.rotation.y = (-Math.PI / 4) + (-Math.PI / 4);
+					sceneFork.rotation.y = (Math.PI / 4)
+					scene.add(sceneFork);
+
+					var loaderSceneFork = new THREE.FBXLoader();
+					loaderSceneFork.load('assets/scene/fork/fork-fbx.html', function ( object ) {
+
+						object.traverse( function ( child ) {
+
+							if ( child.isMesh ) {
+
+								child.castShadow = true;
+								child.receiveShadow = true;
+
+							}
+
+						} );
+
+						sceneFork.add( object );
+
+						loaded.innerHTML = '<div id="loadedComplete"></div>';
+
+					} );				
+
+
+				}else if(mode == 'jumping' || mode == 'spin0' || mode == 'spin1' || mode == 'spin2' || mode == 'spin3'){
+					
+					var sceneSmall = new THREE.Object3D();
+					var sceneSmallScale = 0.2;
+					sceneSmall.position.y = FLOOR - 5;
+					sceneSmall.scale.set(sceneSmallScale, sceneSmallScale, sceneSmallScale);
+					sceneSmall.rotation.y = Math.PI / 4;
+					scene.add(sceneSmall);
+
+					var loaderSceneSmall = new THREE.FBXLoader();
+					loaderSceneSmall.load('assets/scene/sceneSmall/sceneSmall-fbx.html', function ( object ) {
+
+						object.traverse( function ( child ) {
+
+							if ( child.isMesh ) {
+
+								child.castShadow = true;
+								child.receiveShadow = true;
+
+							}
+
+						} );
+
+						sceneSmall.add( object );
+
+
+						sceneFork = new THREE.Object3D();
+						sceneForkScale = 0.012;
+						// sceneForkScale = 0.12;  //for icon
+						sceneFork.position.x = 8;
+						sceneFork.position.y = FLOOR + 2;
+						sceneFork.scale.set(sceneForkScale, sceneForkScale, sceneForkScale);
+						sceneFork.rotation.y = (-Math.PI / 4) + (-Math.PI / 4);
+						scene.add(sceneFork);
+
+						var loaderSceneFork = new THREE.FBXLoader();
+						loaderSceneFork.load('assets/scene/fork/fork-fbx.html', function ( object ) {
+
+							object.traverse( function ( child ) {
+
+								if ( child.isMesh ) {
+
+									child.castShadow = true;
+									child.receiveShadow = true;
+
+								}
+
+							} );
+
+							sceneFork.add( object );
+
+							loaded.innerHTML = '<div id="loadedComplete"></div>';
+
+							if(mode == 'jumping'){
+								forkJump();
+							}else if(mode == 'spin0'){
+								forkSpin(0);
+							}else if(mode == 'spin1'){
+								forkSpin(1);
+							}else if(mode == 'spin2'){
+								forkSpin(2);
+							}else if(mode == 'spin3'){
+								forkSpin(3);
+							}
+
+						} );					
+
+						  
+					} );
+
+
+				}
+
+			}
+
+			function forkJump(){
+				var duration = 1;
+				var delay = 0.5;
+				TweenMax.to(sceneFork.position, duration / 4, {y:FLOOR + 20, ease:Power2.easeOut, delay: delay });
+				TweenMax.to(sceneFork.position, duration / 2, {y:FLOOR + 2, ease:Bounce.easeOut, delay:delay + (duration / 4), onComplete: forkJump});
+
+			}
+
+			function forkSpin(id){
+				var duration = 1;
+				var delay = 0.5;
+
+				setTimeout(function(){
+					var sound = new Sound('assets/sound/fork-jumping.mp3', 100);
+					sound.start();
+				}, delay * 1000);
+
+				TweenMax.to(sceneFork.position, duration / 4, {y:FLOOR + 20, ease:Power2.easeOut, delay: delay });
+				TweenMax.to(sceneFork.position, duration / 2, {y:FLOOR + 2, ease:Bounce.easeOut, delay:delay + (duration / 4)});
+
+				var rotation = THREE.Math.degToRad(-45) - (id * THREE.Math.degToRad(90)) - (THREE.Math.degToRad(360) * 8);
+
+				TweenMax.to(sceneFork.rotation, 4, { y: rotation, ease:Power2.easeInOut, delay: delay});
+
+			}			
+
+			function animate() {
+				requestAnimationFrame( animate );
+				render();
+			}
+
+			function render() {
+				renderer.clear();
+				renderer.render( scene, camera );
+			}
+
+			function Sound(source,volume,loop)
+			{
+				this.source=source;
+				this.volume=volume;
+				this.loop=loop;
+				var son;
+				this.son=son;
+				this.finish=false;
+				this.stop=function()
+				{
+					document.body.removeChild(this.son);
+				}
+				this.start=function()
+				{
+					if(this.finish)return false;
+					this.son=document.createElement("embed");
+					this.son.setAttribute("src",this.source);
+					this.son.setAttribute("hidden","true");
+					this.son.setAttribute("volume",this.volume);
+					this.son.setAttribute("autostart","true");
+					this.son.setAttribute("loop",this.loop);
+					document.body.appendChild(this.son);
+				}
+				this.remove=function()
+				{
+					document.body.removeChild(this.son);
+					this.finish=true;
+				}
+				this.init=function(volume,loop)
+				{
+					this.finish=false;
+					this.volume=volume;
+					this.loop=loop;
+				}
+			}			
+
+		</script>
+
+	</body>
+</html>

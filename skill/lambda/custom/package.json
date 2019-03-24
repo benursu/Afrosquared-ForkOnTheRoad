@@ -1,0 +1,17 @@
+{
+  "name": "Afrosquared-ForkInTheRoad",
+  "productName": "",
+  "version": "0.0.1",
+  "description": "",
+  "license": "MIT",
+  "repository": "",
+  "author": {
+    "name": "Ursu, Ben",
+    "email": "ben.ursu@afrosquared.com",
+    "url": "null"
+  },
+  "dependencies": {
+    "ask-sdk-core": "^2.1.0-beta.4",
+    "ask-sdk-model": "^1.4.0-beta.1"
+  }
+}

@@ -1,0 +1,147 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "fork on the road",
+            "intents": [
+                {
+                    "name": "AMAZON.FallbackIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": [
+                        "cancel"
+                    ]
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": [
+                        "what can i say",
+                        "what can i do",
+                        "help"
+                    ]
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": [
+                        "stop"
+                    ]
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.MoreIntent",
+                    "samples": [
+                        "more"
+                    ]
+                },
+                {
+                    "name": "AMAZON.NavigateSettingsIntent",
+                    "samples": [
+                        "settings"
+                    ]
+                },
+                {
+                    "name": "AMAZON.NextIntent",
+                    "samples": [
+                        "next"
+                    ]
+                },
+                {
+                    "name": "AMAZON.PageUpIntent",
+                    "samples": [
+                        "page up"
+                    ]
+                },
+                {
+                    "name": "AMAZON.PageDownIntent",
+                    "samples": [
+                        "page down"
+                    ]
+                },
+                {
+                    "name": "AMAZON.PreviousIntent",
+                    "samples": [
+                        "previous"
+                    ]
+                },
+                {
+                    "name": "AMAZON.ScrollRightIntent",
+                    "samples": [
+                        "scroll right"
+                    ]
+                },
+                {
+                    "name": "AMAZON.ScrollDownIntent",
+                    "samples": [
+                        "scroll down"
+                    ]
+                },
+                {
+                    "name": "AMAZON.ScrollLeftIntent",
+                    "samples": [
+                        "scroll left"
+                    ]
+                },
+                {
+                    "name": "AMAZON.ScrollUpIntent",
+                    "samples": [
+                        "scroll up"
+                    ]
+                },
+                {
+                    "name": "AddIntent",
+                    "slots": [
+                        {
+                            "name": "item",
+                            "type": "AMAZON.SearchQuery"
+                        }                        
+                    ],
+                    "samples": [
+                        "add {item}",
+                        "put {item}",
+                        "put in {item}"
+                    ]
+                },
+                {
+                    "name": "RemoveIntent",
+                    "slots": [
+                        {
+                            "name": "item",
+                            "type": "AMAZON.SearchQuery"
+                        }                        
+                    ],
+                    "samples": [
+                        "remove {item}",
+                        "delete {item}",
+                        "take out {item}"
+                    ]
+                },                
+                {
+                    "name": "SpinIntent",
+                    "slots": [],
+                    "samples": [
+                        "spin fork",
+                        "spin the fork",
+                        "fork spin"
+                    ]
+                }
+            ],
+            "types": [               
+            ]
+        },
+        "prompts": [
+            {
+                "id": "Elicit.Slot.1227623170231.300273171740",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "I didn't catch that. Can you repeat it?"
+                    }
+                ]
+            }
+        ]
+    }
+}
